@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Life of an Image — told in screenshots</title>
+<style>
+  :root{
+    --bg:#0a0a0b;--panel:#121214;--panel-2:#171719;--line:#2a2a2e;
+    --bone:#ece9e2;--dim:#8a8a90;--yellow:#ffe000;--red:#e0473c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--bone);font-family:"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+
+  header{padding:22px 26px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:30;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  h1{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;letter-spacing:.05em;text-transform:uppercase;font-size:clamp(24px,3vw,40px);line-height:.92}
+  h1 .y{color:var(--yellow)}
+  .sub{color:var(--dim);font-size:13px;margin-top:6px;max-width:62ch;line-height:1.4}
+  .controls{display:flex;gap:8px;align-items:center}
+  .btn{background:var(--panel-2);border:1px solid var(--line);color:var(--bone);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 13px;border-radius:2px;cursor:pointer;font-family:inherit;transition:.15s}
+  .btn:hover{border-color:var(--yellow);color:var(--yellow)}
+  .btn.armed{background:var(--yellow);color:#000;border-color:var(--yellow)}
+  .btn .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:middle}
+  .btn.armed .dot{background:#000}
+
+  .strip-wrap{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .strip{display:flex;gap:0;min-width:min-content}
+  .phase{flex:0 0 clamp(300px,27vw,400px);scroll-snap-align:start;border-right:1px solid var(--line);min-height:calc(100vh - 92px);display:flex;flex-direction:column;opacity:0;transform:translateY(10px)}
+  .phase.lit{opacity:1;transform:none;transition:opacity .5s,transform .5s}
+  .phead{padding:14px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:9px;position:sticky;top:0;background:var(--panel);z-index:5}
+  .pnum{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;color:var(--yellow);font-size:16px}
+  .pname{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:700;text-transform:uppercase;letter-spacing:.07em;font-size:16px}
+  .psub{margin-left:auto;font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+  .pbody{padding:14px;display:flex;flex-direction:column;gap:12px;flex:1}
+  .lede{font-size:12.5px;line-height:1.45;color:var(--bone)}
+  .lede b{color:var(--yellow);font-weight:700}
+
+  .shot{position:relative;border:1px solid var(--line);border-radius:3px;overflow:hidden;cursor:zoom-in;background:#000;transition:.15s}
+  .shot:hover{border-color:var(--bone);transform:translateY(-2px)}
+  .shot.verified{border-left:3px solid var(--yellow)}
+  .shot.claimed{border-left:3px dashed var(--dim)}
+  .shot.rumor{border-left:3px dashed var(--red)}
+  .shot img{width:100%;display:block}
+  .shot .stamp{position:absolute;top:7px;left:7px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:2px 6px;border-radius:2px;z-index:2}
+  .stamp.verified{background:var(--yellow);color:#000}
+  .stamp.claimed{background:rgba(0,0,0,.7);border:1px solid var(--dim);color:var(--dim)}
+  .stamp.rumor{background:rgba(0,0,0,.7);border:1px solid var(--red);color:var(--red)}
+  .shot .cap{padding:8px 9px;font-size:10.5px;line-height:1.35;color:var(--dim);background:var(--panel-2)}
+  .shot .cap b{color:var(--bone)}
+
+  .wall-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-top:4px}
+  .wall{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+  .wall .tile{border:1px solid var(--line);border-radius:1px;overflow:hidden;cursor:zoom-in;aspect-ratio:3/4;background:#000}
+  .wall .tile img{width:100%;height:100%;object-fit:cover;display:block;transition:.2s}
+  .wall .tile:hover img{transform:scale(1.06)}
+  .wall-note{font-size:10px;color:var(--dim);text-align:center;letter-spacing:.03em}
+
+  body.strip-mode .shot.rumor,body.strip-mode .shot.claimed{opacity:.12;filter:grayscale(1)}
+  body.strip-mode .wall,body.strip-mode .wall-label,body.strip-mode .wall-note{opacity:.1;filter:grayscale(1)}
+
+  .lb{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;opacity:0;pointer-events:none;transition:.2s;z-index:60;padding:30px}
+  .lb.open{opacity:1;pointer-events:auto}
+  .lb img{max-width:90vw;max-height:74vh;border:1px solid var(--line);border-radius:3px}
+  .lb .info{max-width:680px;text-align:center}
+  .lb .info .t{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:20px;margin-bottom:6px}
+  .lb .info .d{font-size:13px;line-height:1.5;color:var(--dim)}
+  .lb .info .d b{color:var(--bone)}
+  .lb .info .status{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:2px 8px;border-radius:2px;margin-bottom:10px}
+  .lb .x{position:absolute;top:20px;right:24px;background:none;border:1px solid var(--line);color:var(--bone);width:34px;height:34px;border-radius:2px;cursor:pointer;font-size:15px}
+  .lb .x:hover{border-color:var(--yellow);color:var(--yellow)}
+
+  footer{border-top:1px solid var(--line);padding:16px 26px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;background:var(--panel)}
+  .kicker{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-size:clamp(15px,1.6vw,20px);line-height:1.05;max-width:60ch}
+  .kicker .y{color:var(--yellow)}
+  .legend{display:flex;gap:16px;font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;flex-wrap:wrap}
+  .legend i{display:inline-block;width:18px;height:0;border-top:3px solid;margin-right:5px;vertical-align:middle}
+  .scrollhint{font-size:10px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+
+  @media(max-width:760px){
+    .phase{flex-basis:88vw;min-height:auto}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>The Life of an <span class="y">Image</span></h1>
+    <div class="sub">One photographic gesture, traced through global football culture in a single week — told entirely through the screenshots it left behind. Scroll right →</div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="replay">▶ Replay spread</button>
+    <button class="btn" id="strip"><span class="dot"></span>Verified only</button>
+  </div>
+</header>
+
+<div class="strip-wrap" id="stripWrap">
+  <div class="strip" id="stripEl"></div>
+</div>
+
+<footer>
+  <div class="kicker">It no longer takes years for a visual language to become a trend. <span class="y">It now takes days.</span> The casualty isn't the stolen look — it's that everyone looked the same way at once.</div>
+  <div>
+    <div class="legend">
+      <span><i style="border-color:var(--yellow)"></i>Verified</span>
+      <span><i style="border-color:var(--dim);border-top-style:dashed"></i>Claimed</span>
+      <span><i style="border-color:var(--red);border-top-style:dashed"></i>Rumor</span>
+    </div>
+    <div class="scrollhint" style="margin-top:8px">Click any screenshot to enlarge · Esc to close</div>
+  </div>
+</footer>
+
+<div class="lb" id="lb">
+  <button class="x" id="lbx">✕</button>
+  <img id="lbimg" src="" alt="">
+  <div class="info" id="lbinfo"></div>
+</div>
+
+<script>
+const S="images/";
+const PHASES=[
+  {n:"01",name:"Spark",sub:"birth",
+   lede:"A top French sports photographer <b>chose not to apply</b> for accreditation — by her own account — and shot the broadcast off her living-room TV. The gesture echoes Harry Gruyaert's TV Shots of the 1972 Munich Olympics.",
+   shots:[
+     {f:"Screenshot_2026-06-28_at_5_26_01_AM.png",cls:"verified",st:"Verified",
+      cap:"<b>Florence Pernet's own statement.</b> The issue is not her work — it's how much of the photographic media ecosystem chose to cover it.",
+      lbt:"Spark — the originating text",
+      lbd:"Pernet's framing of her own project. The crucial nuance the crowd dropped: she <b>declined to apply</b> for accreditation. She was <b>not rejected by FIFA</b> — confirmed in her own interview."}
+   ]},
+  {n:"02",name:"Discovery",sub:"recognition",
+   lede:"The aggregator <b>VERSUS</b> repackages a conceptual gesture as a hype aesthetic — 'we call this one Flo state.' Cultural journalism begins its shift into pure trend relay.",
+   shots:[
+     {f:"Screenshot_2026-06-28_at_5_25_01_AM.png",cls:"verified",st:"Verified",
+      cap:"The reframe: cultural journalism should provide <b>context</b>, not chase the next trend. The line the whole case turns on.",
+      lbt:"Discovery — the reframe",
+      lbd:"VERSUS credited Gruyaert and Matthew Johnson — rare context — but sold it as 'you don't need accreditation to be certified.' Repackaging is where interpretation starts becoming relay."}
+   ]},
+  {n:"03",name:"Adoption",sub:"validation",
+   lede:"The subjects start adopting the aesthetic to represent <b>themselves</b>. <b>Michael Olise</b> deletes his entire feed, rebuilds it in Pernet's TV style, and gains 1M+ followers. The trend escapes photography and enters athletic branding.",
+   shots:[
+     {f:"Screenshot_2026-06-28_at_5_34_57_AM.png",cls:"verified",st:"Verified",
+      cap:"<b>@m.olise, verified.</b> 2.2M likes. Comments: 'This guy always doing different stuffs' / 'You did it on purpose.' Adoption read as meme participation.",
+      lbt:"Adoption — Olise rebrands",
+      lbd:"The single strongest 'trend escapes photography' data point: an A-list player wipes his feed and rebuilds his identity around a photographer's gesture, rewarded with +1M followers. Verified via reporting and his account @m.olise. <b>This fact flipped five times in our own fact-check before it locked.</b>"},
+     {f:"Screenshot_2026-06-28_at_5_35_15_AM.png",cls:"verified",st:"Verified",
+      cap:"Olise carousel: the France walkout, shot off-screen.",
+      lbt:"Adoption — the content",
+      lbd:"The actual images inside Olise's post: France's team walkout, photographed from the broadcast. The aesthetic is now a player's self-presentation."}
+   ]},
+  {n:"04",name:"Escape",sub:"explosion",
+   lede:"Spark → Escape compressed into one week. <b>87 likes → 29.6K → 2.2M+.</b> The aggregator ball.ldn reposts; the looking begins to collapse in the replies.",
+   shots:[
+     {f:"Screenshot_2026-06-28_at_6_04_21_AM.png",cls:"claimed",st:"Claimed",
+      cap:"<b>@ball.ldn aggregator.</b> The full sentiment spectrum in one frame: 'Some of these are hard 👊' beside 'Tf is this 💀' and 'These look bad.'",
+      lbt:"Escape — the amplifier",
+      lbd:"A verified aggregator reposts the look to a mass audience. Note the top comment — 'Olise ahh post' — is slang, not proof Olise made it. The crowd rates whether the blur looks cool; nobody mentions Gruyaert. The looking, collapsing live."}
+   ]},
+  {n:"05",name:"Replication",sub:"imitation",
+   lede:"The aesthetic is <b>stripped of its meaning</b>. celine_zpy and dozens more post 'shot from my tv' — many recycling <b>old footage</b>. The gesture required being able to attend and declining. The copy keeps only the blur.",
+   shots:[
+     {f:"Screenshot_2026-06-28_at_5_42_29_AM.png",cls:"rumor",st:"Rumor",
+      cap:"<b>@celine_zpy.</b> 'Portugal 🇵🇹 / Shot from my tv.' 50 likes, 18+ slide carousel. The pure copycat.",
+      lbt:"Replication — the copycat",
+      lbd:"celine_zpy confirmed via screenshots (verified act of copying). Marked 'rumor' for the recycling claim: several slides show a TV5 broadcast bug and older kits — inference, not proof, that the footage predates this World Cup. Context abandoned for repetition."}
+   ],
+   wall:[
+     "Screenshot_2026-06-28_at_5_31_38_AM.png","Screenshot_2026-06-28_at_5_31_45_AM.png",
+     "Screenshot_2026-06-28_at_5_31_52_AM.png","Screenshot_2026-06-28_at_5_31_59_AM.png",
+     "Screenshot_2026-06-28_at_5_40_04_AM.png","Screenshot_2026-06-28_at_5_40_11_AM.png",
+     "Screenshot_2026-06-28_at_5_40_21_AM.png","Screenshot_2026-06-28_at_5_40_29_AM.png",
+     "Screenshot_2026-06-28_at_5_40_36_AM.png","Screenshot_2026-06-28_at_5_40_45_AM.png",
+     "Screenshot_2026-06-28_at_5_25_08_AM.png","Screenshot_2026-06-28_at_5_25_23_AM.png"
+   ]},
+  {n:"06",name:"Reaction",sub:"resistance",
+   lede:"The backlash reveals the real casualty: not a stolen aesthetic, but the <b>collapse of critical interpretation</b>. Giacomo Cosua reframes it — the revolution was televised; the question is who still knows how to look.",
+   shots:[
+     {f:"Screenshot_2026-06-28_at_5_25_47_AM.png",cls:"verified",st:"Verified",
+      cap:"The resistance, stated plainly: situate the work in the <b>longer history of photography</b> — almost no one did.",
+      lbt:"Reaction — the critique",
+      lbd:"The sharpest response in the cycle. Not 'her work is bad' but 'why did everyone look the same way?' It sets the standard this very board tries to meet: situate, interrogate, connect to history."},
+     {f:"Screenshot_2026-06-28_at_5_25_32_AM.png",cls:"claimed",st:"Claimed",
+      cap:"The 1970s ↔ 2026 lineage: Gruyaert's TV Shots → Pernet. The context almost nobody supplied.",
+      lbt:"Reaction — the missing history",
+      lbd:"The historical frame: Gruyaert (1972 Munich) and Thomas Ruff questioned mediated images decades ago. 'Claimed' because it's the deck's framing of the lineage, not a single citation — but it's the context the ecosystem skipped."}
+   ]}
+];
+
+const stripEl=document.getElementById('stripEl');
+PHASES.forEach(ph=>{
+  const sec=document.createElement('section');sec.className='phase';
+  let shots=ph.shots.map(s=>`
+    <div class="shot ${s.cls}" data-img="${S}${s.f}" data-t="${esc(s.lbt)}" data-d="${esc(s.lbd)}" data-st="${s.st}" data-cls="${s.cls}">
+      <span class="stamp ${s.cls}">${s.st}</span>
+      <img src="${S}${s.f}" alt="${esc(s.lbt)}" loading="lazy">
+      <div class="cap">${s.cap}</div>
+    </div>`).join('');
+  let wall='';
+  if(ph.wall){
+    wall=`<div class="wall-label">The herd · same look, no source</div>
+      <div class="wall">${ph.wall.map(f=>`<div class="tile" data-img="${S}${f}" data-t="Copycat slide" data-d="One of dozens of near-identical reposts. No caption, no credit, no source. The repetition is the message." data-st="Rumor" data-cls="rumor"><img src="${S}${f}" alt="copycat" loading="lazy"></div>`).join('')}</div>
+      <div class="wall-note mono">the same content, platform to platform, with little added value</div>`;
+  }
+  sec.innerHTML=`<div class="phead"><span class="pnum mono">${ph.n}</span><span class="pname">${ph.name}</span><span class="psub mono">${ph.sub}</span></div>
+    <div class="pbody"><div class="lede">${ph.lede}</div>${shots}${wall}</div>`;
+  stripEl.appendChild(sec);
+});
+
+function esc(s){return s.replace(/"/g,'&quot;')}
+
+function play(){
+  const ps=document.querySelectorAll('.phase');
+  ps.forEach(p=>p.classList.remove('lit'));
+  ps.forEach((p,i)=>setTimeout(()=>p.classList.add('lit'),170*i+100));
+}
+play();
+document.getElementById('replay').addEventListener('click',play);
+
+const sb=document.getElementById('strip');
+sb.addEventListener('click',()=>{
+  document.body.classList.toggle('strip-mode');
+  sb.classList.toggle('armed',document.body.classList.contains('strip-mode'));
+});
+
+const lb=document.getElementById('lb'),lbimg=document.getElementById('lbimg'),lbinfo=document.getElementById('lbinfo');
+function openLb(el){
+  lbimg.src=el.dataset.img;
+  const cls=el.dataset.cls;
+  const col=cls==='verified'?'var(--yellow)':cls==='rumor'?'var(--red)':'var(--dim)';
+  const bg=cls==='verified'?'background:var(--yellow);color:#000':`border:1px solid ${col};color:${col}`;
+  lbinfo.innerHTML=`<span class="status" style="${bg}">${el.dataset.st}</span><div class="t">${el.dataset.t}</div><div class="d">${el.dataset.d}</div>`;
+  lb.classList.add('open');
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-img]');
+  if(t){openLb(t)}
+});
+document.getElementById('lbx').addEventListener('click',()=>lb.classList.remove('open'));
+lb.addEventListener('click',e=>{if(e.target===lb)lb.classList.remove('open')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('open')});
+</script>
+</body>
+</html>
